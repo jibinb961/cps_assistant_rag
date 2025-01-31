@@ -30,7 +30,6 @@ class ProgramInfo:
     title: str
     summary: str
     content: str
-    campus_location: str
     chunk_number: int
     embedding: List[float]
     metadata: Dict[str, Any]
@@ -319,7 +318,7 @@ async def extract_program_info(chunk: str, url: str, chunk_number: int, program_
             response = await client.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "llama3-chatqa:latest",
+                    "model": "llama3.2:3b",
                     "prompt": f"{system_prompt}\n\nURL: {url}\n\nContent:\n{chunk[:1000]}",
                     "stream": False
                 }
@@ -330,7 +329,7 @@ async def extract_program_info(chunk: str, url: str, chunk_number: int, program_
             # Check if 'response' key exists and is not empty
             if "response" not in result or not result["response"].strip():
                 print(f"Warning: Empty response from LLM for {url}")
-                extracted = {"summary": "\n".join(chunk.splitlines()[:10])}  # Fallback: First few lines
+                extracted = {"summary": "\n".join(chunk.splitlines()[:3])}  # Fallback: First few lines
             else:
                 raw_text = result["response"]
 
@@ -352,7 +351,6 @@ async def extract_program_info(chunk: str, url: str, chunk_number: int, program_
 
             # Ensure 'summary' exists in the extracted data
             summary = extracted.get("summary", "\n".join(chunk.splitlines()[:3]))
-            print(summary)
             
             # Get unique embedding for this chunk
             embedding = await get_embedding(chunk)
@@ -369,8 +367,8 @@ async def extract_program_info(chunk: str, url: str, chunk_number: int, program_
             }
             
             # Add program details if available
-            # if program_details:
-            #     metadata.update(program_details)
+            if program_details:
+                metadata.update(program_details)
             
             return ProgramInfo(
                 url=url,
@@ -455,7 +453,7 @@ async def main():
         root = ElementTree.fromstring(response.content)
         namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
         urls = [loc.text for loc in root.findall('.//ns:loc', namespace)]
-        
+        print(len(urls))
         all_program_info = []
         for url in urls:
             program_infos = await process_url(url, crawler)
