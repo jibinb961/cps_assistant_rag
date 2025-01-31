@@ -385,7 +385,7 @@ async def extract_program_info(chunk: str, url: str, chunk_number: int, program_
         print(f"Error processing chunk for {url}: {e}")
         return None
 
-async def process_url(url: str, crawler: AsyncWebCrawler) -> List[ProgramInfo]:
+async def process_url(url: str, crawler: AsyncWebCrawler) -> Optional[List[ProgramInfo]]:
     """Process a single URL and extract program information."""
     try:
         print(f"Processing: {url}")
@@ -399,43 +399,138 @@ async def process_url(url: str, crawler: AsyncWebCrawler) -> List[ProgramInfo]:
             print(f"Failed to crawl {url}: {result.error_message}")
             return []
             
-        cleaned_content = process_and_modify_markdown(result.markdown_v2.raw_markdown)
+        #cleaned_content = process_and_modify_markdown(result.markdown_v2.raw_markdown)
         # print(cleaned_content)
-        # with open('program_data.jsonl', 'w') as f:
-        #     f.write(cleaned_content)
+        cleaned_content = clean_webpage_content(result.markdown_v2.raw_markdown)
+        with open('program_data.md', 'a') as f:
+            f.write(" \n -- Partition --- \n\n"+cleaned_content)
         
         
 
-        chunks = chunk_program_content(cleaned_content)
-        print(len(chunks))
+        #chunks = chunk_program_content(cleaned_content)
+        #print(len(chunks))
         # with open('program_data.jsonl', 'a') as f:
         #     f.write('\n --Partition --- \n'.join(chunks))  # Join with newlines for separate lines
         
-        program_infos = []
-        program_details = {}
-        for i, chunk in enumerate(chunks, 1):
-            info = await extract_program_info(
-            chunk=chunk,
-            url=url,
-            chunk_number=i,
-            program_details=program_details
-            )
-            if info:
-                if i == 1:
-                    # Store just the program-specific details from first chunk
-                    program_details = {
-                        'program_name': info.metadata['program_name'],
-                        'program_mode': info.metadata['program_mode'],
-                        'campus_location': info.metadata['campus_location']
-                    }
-                program_infos.append(info)
-                await insert_chunk(info)
+        # program_infos = []
+        # program_details = {}
+        # for i, chunk in enumerate(chunks, 1):
+        #     info = await extract_program_info(
+        #     chunk=chunk,
+        #     url=url,
+        #     chunk_number=i,
+        #     program_details=program_details
+        #     )
+        #     if info:
+        #         if i == 1:
+        #             # Store just the program-specific details from first chunk
+        #             program_details = {
+        #                 'program_name': info.metadata['program_name'],
+        #                 'program_mode': info.metadata['program_mode'],
+        #                 'campus_location': info.metadata['campus_location']
+        #             }
+        #         program_infos.append(info)
+        #         await insert_chunk(info)
             
-        return program_infos
+        #return program_infos
+
+        return None
         
     except Exception as e:
         print(f"Error processing {url}: {e}")
         return []
+
+def clean_webpage_content(content: str) -> str:
+    """
+    Cleans webpage content while preserving important URLs within the main content.
+    
+    Args:
+        content (str): Raw webpage content
+    
+    Returns:
+        str: Cleaned content suitable for RAG with preserved important URLs
+    """
+    def remove_navigation_links(text: str) -> str:
+        """Removes navigation-related content while keeping important URLs."""
+        # Remove navigation patterns
+        patterns = [
+            r'\[Skip to main content\].*?»',
+            r'\[Top\].*?»',
+            r'### Have A Question\?.*?Email',
+            r'Quick Links.*',
+            r'Our Community.*',
+            r'Library Locations.*',
+            r'© \d{4} Northeastern University',
+            r'previousnextslideshow',
+        ]
+        
+        for pattern in patterns:
+            text = re.sub(pattern, '', text, flags=re.DOTALL | re.MULTILINE)
+        return text
+
+    def clean_urls(text: str) -> str:
+        """
+        Cleans URLs while preserving important ones within content.
+        Keeps URLs that are referenced in sentences but removes standalone navigation links.
+        """
+        # Remove standalone markdown links that are likely navigation
+        text = re.sub(r'^\s*\[([^\]]+)\]\([^)]+\)\s*$', '', text, flags=re.MULTILINE)
+        
+        # Convert markdown links within paragraphs to plain text with URL
+        def replace_markdown_link(match):
+            text = match.group(1)
+            url = match.group(2)
+            # Only keep URLs that are specifically mentioned as forms or resources
+            if any(keyword in url.lower() for keyword in [
+                'form', 'request', 'standard', 'guide', 'compass', 'ieee', 
+                'madcad', 'libwizard', 'subjectguides'
+            ]):
+                return f"{text} ({url})"
+            return text
+        
+        text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', replace_markdown_link, text)
+        return text
+
+    def remove_empty_lines(text: str) -> str:
+        """Removes empty lines and spaces."""
+        lines = text.split('\n')
+        cleaned_lines = [line.strip() for line in lines if line.strip()]
+        return '\n'.join(cleaned_lines)
+    
+    def extract_main_content(text: str) -> str:
+        """Extracts the main content sections."""
+        main_content_start = text.find('# Requesting Standards')
+        if main_content_start != -1:
+            return text[main_content_start:]
+        return text
+    
+    def clean_markdown_artifacts(text: str) -> str:
+        """Cleans up markdown formatting artifacts while preserving structure."""
+        # Convert headers to plain text while keeping some structure
+        text = re.sub(r'#{1,6}\s*([^\n]+)', r'\1:', text)
+        # Remove bullet points while keeping the text
+        text = re.sub(r'^\s*\*\s*', '- ', text, flags=re.MULTILINE)
+        return text
+    
+    def format_final_text(text: str) -> str:
+        """Formats the final text for better readability."""
+        # Add line breaks between sections
+        text = re.sub(r'([.!?])\s*([A-Z])', r'\1\n\n\2', text)
+        # Ensure consistent spacing around preserved URLs
+        text = re.sub(r'\s+\(http', ' (http', text)
+        text = re.sub(r'\)\s+', ') ', text)
+        return text
+    
+    # Apply cleaning steps in sequence
+    cleaned_content = content
+    cleaned_content = remove_navigation_links(cleaned_content)
+    cleaned_content = extract_main_content(cleaned_content)
+    cleaned_content = clean_urls(cleaned_content)
+    cleaned_content = clean_markdown_artifacts(cleaned_content)
+    cleaned_content = remove_empty_lines(cleaned_content)
+    cleaned_content = format_final_text(cleaned_content)
+    
+    return cleaned_content
 
 async def main():
     browser_config = BrowserConfig(
@@ -449,7 +544,7 @@ async def main():
     
     try:
         response = requests.get(
-            "https://cps.northeastern.edu/cps-program-sitemap.xml",
+            "https://library.northeastern.edu/sitemap-index.xml",
             headers={"User-Agent": "Mozilla/5.0"}
         )
         root = ElementTree.fromstring(response.content)
@@ -458,23 +553,23 @@ async def main():
         
         all_program_info = []
         for url in urls:
-            program_infos = await process_url(url, crawler)
-            all_program_info.extend(program_infos)
+            await process_url(url, crawler)
+            #all_program_info.extend(program_infos)
             
             # Note: We're still keeping the JSONL file as backup
-            with open('program_data.jsonl', 'a') as f:
-                for info in program_infos:
-                    f.write(json.dumps({
-                        "url": info.url,
-                        "title": info.title,
-                        "summary": info.summary,
-                        "content": info.content,
-                        "chunk_number": info.chunk_number,
-                        "metadata": info.metadata
-                    }) + '\n')
+            # with open('program_data.jsonl', 'a') as f:
+            #     for info in program_infos:
+            #         f.write(json.dumps({
+            #             "url": info.url,
+            #             "title": info.title,
+            #             "summary": info.summary,
+            #             "content": info.content,
+            #             "chunk_number": info.chunk_number,
+            #             "metadata": info.metadata
+            #         }) + '\n')
                     
-            print(f"Processed {url}: Found {len(program_infos)} chunks")
-            await asyncio.sleep(2)
+            #print(f"Processed {url}: Found {len(program_infos)} chunks")
+            #await asyncio.sleep(2)
             
     finally:
         await crawler.close()
