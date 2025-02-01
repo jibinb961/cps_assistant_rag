@@ -46,7 +46,6 @@ async def insert_chunk(chunk: ProgramInfo):
             "metadata": chunk.metadata,
             "embedding": chunk.embedding
         }
-        print(data)
         
         result = supabase.table("site_pages").insert(data).execute()
         print(f"Inserted chunk {chunk.chunk_number} for {chunk.url}")
@@ -329,7 +328,7 @@ async def extract_program_info(chunk: str, url: str, chunk_number: int, program_
             # Check if 'response' key exists and is not empty
             if "response" not in result or not result["response"].strip():
                 print(f"Warning: Empty response from LLM for {url}")
-                extracted = {"summary": "\n".join(chunk.splitlines()[:3])}  # Fallback: First few lines
+                extracted = {"summary": "\n".join(chunk.splitlines()[:6])}  # Fallback: First few lines
             else:
                 raw_text = result["response"]
 
