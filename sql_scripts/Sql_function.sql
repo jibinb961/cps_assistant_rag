@@ -1,3 +1,29 @@
+-- Enable the pgvector extension
+create extension if not exists vector;
+
+-- Create the documentation chunks table
+create table site_pages (
+    id bigserial primary key,
+    url varchar not null,
+    chunk_number integer not null,
+    title varchar not null,
+    summary varchar not null,
+    content text not null,  -- Added content column
+    metadata jsonb not null default '{}'::jsonb,  -- Added metadata column
+    embedding vector(768),  -- nomic-embed-text embeddings are 768 dimensions
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    
+    -- Add a unique constraint to prevent duplicate chunks for the same URL
+    unique(url, chunk_number)
+);
+
+-- Create an index for better vector similarity search performance
+create index on site_pages using ivfflat (embedding vector_cosine_ops);
+
+-- Create an index on metadata for faster filtering
+create index idx_site_pages_metadata on site_pages using gin (metadata);
+
+
 create or replace function match_site_pages (
   query_embedding vector(768),
   match_count int default 10,
@@ -61,3 +87,12 @@ begin
   end if;
 end;
 $$;
+
+alter table site_pages enable row level security;
+
+-- Create a policy that allows anyone to read
+create policy "Allow public read access"
+  on site_pages
+  for select
+  to public
+  using (true);
