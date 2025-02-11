@@ -25,7 +25,7 @@ The **CPS AI Assistant** is an open-source AI-powered assistant designed to redu
 Here are some snapshots of the project in action:
 
 ### Homepage
-![Homepage](snapshots/Homepage.png)
+![Homepage](Snapshots/Homepage.png)
 
 ### Program-Specific Search
 ![Program-Specific Search](snapshots/Program_Specific_Search.png)
