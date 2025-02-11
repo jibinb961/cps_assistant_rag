@@ -1,5 +1,24 @@
-# cps_assistant_rag
-This repository contains the code for implementing a RAG (Retrieval-Augmented Generation) system that stores information about various programs in the College of Professional Studies in a vector database. The system utilizes open-source large language models (LLMs) to act as a student assistant.
+# CPS AI Assistant
+
+## Overview
+The **CPS AI Assistant** is an open-source AI-powered assistant designed to reduce the workload for academic advisors by providing instant responses to student queries. It is built using Retrieval-Augmented Generation (RAG) and leverages vector databases for efficient information retrieval.
+
+## Features
+- **RAG-based Information Retrieval**
+- **Vector Database Storage** using Supabase
+- **Local Embedding Model** using Ollama
+- **Streamlit UI** for easy interaction
+- **Automated Data Scraping & Cleaning**
+- **Fast and Scalable Deployment**
+
+## Technologies Used
+- **Python 3.9+**
+- **Ollama** (for text embeddings)
+- **Supabase** (as the vector database)
+- **Groq API** (for AI model inference)
+- **Streamlit** (for the UI)
+- **Crawl4AI** (for web scraping)
+- **LangChain** (for RAG implementation)
 
 # CPS AI Assistant Setup Guide
 
@@ -117,10 +136,21 @@ Save the `.env` file once all values are added.
 
 ---
 
-This guide provides a step-by-step setup process for running the CPS AI Assistant locally. For any additional support or issues, please check the repository's [Issues](https://github.com/jibinb961/cps_assistant_rag/issues) section on GitHub.
 
+## How It Works
+1. **Data Collection**: The assistant scrapes relevant college data and preprocesses it.
+2. **Vectorization**: Data is split into chunks, embedded using Ollama, and stored in Supabase.
+3. **Query Processing**: User queries are processed via the RAG model, retrieving relevant chunks and generating responses.
+4. **AI Response**: The AI model (via Groq API) refines and presents the final answer.
 
+## Contributing
+Feel free to fork the repository and submit pull requests with improvements.
 
-This guide provides a step-by-step setup process for running the CPS AI Assistant locally. For any additional support or issues, please check the repository's [Issues](https://github.com/jibinb961/cps_assistant_rag/issues) section on GitHub.
+## License
+This project is licensed under the MIT License.
+
+## Contact
+For any issues, check the [GitHub Issues](https://github.com/jibinb961/cps_assistant_rag/issues) section.
+
 
 
