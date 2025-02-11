@@ -48,7 +48,7 @@ Ensure you have the following before starting the setup:
 ## Step 3: Set Up the `.env` File
 
 1. Navigate to the `cps_assistant_rag` folder and open it in a code editor.
-2. Create a new file named `.env` in the project root directory.
+2. Create a new file named `.env` under `/dev` location in the project root directory.
 3. Add the following environment variables:
    ```env
    GROQ_API_KEY=your_actual_api_key_here
