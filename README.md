@@ -20,6 +20,19 @@ The **CPS AI Assistant** is an open-source AI-powered assistant designed to redu
 - **Crawl4AI** (for web scraping)
 - **LangChain** (for RAG implementation)
 
+
+## Project Snapshots
+Here are some snapshots of the project in action:
+
+### Homepage
+![Homepage](snapshots/Homepage.png)
+
+### Program-Specific Search
+![Program-Specific Search](snapshots/Program_Specific_Search.png)
+
+### General Search
+![General Search](snapshots/General_search.png)
+
 # CPS AI Assistant Setup Guide
 
 ## Prerequisites
@@ -151,6 +164,12 @@ This project is licensed under the MIT License.
 
 ## Contact
 For any issues, check the [GitHub Issues](https://github.com/jibinb961/cps_assistant_rag/issues) section.
+
+
+
+
+
+
 
 
 
