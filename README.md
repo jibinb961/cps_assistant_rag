@@ -28,10 +28,10 @@ Here are some snapshots of the project in action:
 ![Homepage](Snapshots/Homepage.png)
 
 ### Program-Specific Search
-![Program-Specific Search](snapshots/Program_Specific_Search.png)
+![Program-Specific Search](Snapshots/Program_Specific_Search.png)
 
 ### General Search
-![General Search](snapshots/General_search.png)
+![General Search](Snapshots/General_search.png)
 
 # CPS AI Assistant Setup Guide
 
