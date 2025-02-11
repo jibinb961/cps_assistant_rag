@@ -397,9 +397,6 @@ async def process_url(url: str, crawler: AsyncWebCrawler) -> List[ProgramInfo]:
             return []
             
         cleaned_content = process_and_modify_markdown(result.markdown_v2.raw_markdown)
-        # print(cleaned_content)
-        # with open('program_data.jsonl', 'w') as f:
-        #     f.write(cleaned_content)
         
         
 
@@ -445,6 +442,7 @@ async def main():
     await crawler.start()
     
     try:
+        #replace the sitemap index with your college website sitemap if avaiable. 
         response = requests.get(
             "https://cps.northeastern.edu/cps-program-sitemap.xml",
             headers={"User-Agent": "Mozilla/5.0"}
