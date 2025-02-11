@@ -81,7 +81,17 @@ Save the `.env` file once all values are added.
    ```
    This will start an endpoint at `localhost` to serve as the embedding model.
 
-## Step 5: Run the Streamlit UI
+## Step 5: Store Information in the Vector Database
+
+1. Configure the `upload_to_vectordb.py` file according to your needs. Some cleaning functions are specific to my college website, so modify them to fit your scraped data.
+2. Ensure Ollama is running.
+3. Run the `upload_to_vectordb.py` script:
+   ```bash
+   python upload_to_vectordb.py
+   ```
+   This will scrape, clean, split the data into chunks, generate vector embeddings, and push the chunks to the Supabase vector database. The process duration will depend on your machine specifications and the size of the scraped data.
+
+## Step 6: Run the Streamlit UI
 
 1. Navigate to the `dev` folder under `cps_assistant_rag`:
    ```bash
@@ -106,6 +116,10 @@ Save the `.env` file once all values are added.
 - If the Streamlit app doesn't start, verify that your virtual environment is activated before running the command.
 
 ---
+
+This guide provides a step-by-step setup process for running the CPS AI Assistant locally. For any additional support or issues, please check the repository's [Issues](https://github.com/jibinb961/cps_assistant_rag/issues) section on GitHub.
+
+
 
 This guide provides a step-by-step setup process for running the CPS AI Assistant locally. For any additional support or issues, please check the repository's [Issues](https://github.com/jibinb961/cps_assistant_rag/issues) section on GitHub.
 
