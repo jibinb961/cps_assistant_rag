@@ -159,6 +159,9 @@ Save the `.env` file once all values are added.
 ## Contributing
 Feel free to fork the repository and submit pull requests with improvements.
 
+## Sample Data
+Sitemap URL: https://cps.northeastern.edu/cps-program-sitemap.xml
+
 ## License
 This project is licensed under the MIT License.
 
