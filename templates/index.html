@@ -133,10 +133,33 @@
             <button type="submit" class="btn btn-primary">Run</button>
             <button type="button" class="btn btn-danger" id="cancelButton">Cancel</button>
         </form>
+        <button type="button" class="btn btn-info" id="viewContentButton">View Scraped Content</button>
+        <span id="contentButtonHint" style="color: gray;">(Click to view the scraped content)</span>
         <div id="log" class="mt-4"></div>
     </div>
 
+    <!-- Modal Structure -->
+    <div class="modal fade" id="contentModal" tabindex="-1" role="dialog" aria-labelledby="contentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="contentModalLabel">Scraped Content</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalContent" style="max-height: 400px; overflow-y: auto; overflow-x: auto; color: black;">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
             let eventSource;
@@ -272,6 +295,32 @@
                     // Remove the line input field
                     event.target.parentElement.remove();
                 }
+            });
+
+            $('#viewContentButton').on('click', function() {
+                $.ajax({
+                    url: '/get_content',  // Endpoint to fetch content
+                    type: 'GET',
+                    success: function(data) {
+                        console.log("Content fetched successfully:", data); // Log the fetched content
+                        if (data.trim() === "") {
+                            alert("No content available to display.");
+                        } else {
+                            // Split the content into lines and format with line numbers
+                            const lines = data.split('\n');
+                            const formattedContent = lines.map((line, index) => {
+                                return `<div style="white-space: nowrap;">${index + 1}: ${line}</div>`;
+                            }).join('');
+                            
+                            $('#modalContent').html(formattedContent);  // Load formatted content into modal
+                            $('#contentModal').modal('show'); // Show the modal
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading content:", error); // Log the error
+                        alert('Error loading content.');
+                    }
+                });
             });
         });
     </script>

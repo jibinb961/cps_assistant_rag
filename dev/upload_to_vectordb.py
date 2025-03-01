@@ -583,7 +583,7 @@ class VectorDBUploader:
                     )
                 
                     program_infos.append(info)
-                    await self.insert_chunk(info)
+                    #await self.insert_chunk(info)
             #return None
             return program_infos
             

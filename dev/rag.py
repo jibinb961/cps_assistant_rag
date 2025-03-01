@@ -11,6 +11,7 @@ from supabase import create_client
 from groq import Groq
 from dotenv import load_dotenv
 import os
+from PIL import Image  # Import PIL for image handling
 
 # Load environment variables and initialize clients
 load_dotenv()
@@ -83,6 +84,8 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
+
+
 
 class OllamaEmbeddings:
     def __init__(self, base_url="http://localhost:11434"):
@@ -261,7 +264,7 @@ def main():
         'Choose between a general search or dive deep into specific programs.</p>', 
         unsafe_allow_html=True
     )
-    
+
     # Initialize session state
     initialize_session_state()
     
@@ -290,7 +293,18 @@ def main():
                 st.session_state.search_mode = "coop"
                 st.session_state.selected_program = "coop_information"
                 st.rerun()
-    
+
+    # Display the image below the search modes
+    image_path = "images/CPSBOT6.png"  # Path to your image file
+    image = Image.open(image_path)  # Open the image
+
+    # Resize and position the image
+    st.image(image, width=600)  # Set width to 600 pixels
+
+    # # Alternatively, you can use a container to center the image
+    # with st.container():
+    #     st.image(image, caption="Your Image Caption Here", use_column_width=True)  # Responsive to column width
+
     # Program selection
     if st.session_state.search_mode == "specific":
         all_programs = get_available_programs()

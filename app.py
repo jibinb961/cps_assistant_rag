@@ -78,6 +78,16 @@ def stream_logs():
                     time.sleep(0.1)  # Small delay to prevent busy-waiting
     return Response(generate(), mimetype='text/event-stream')
 
+@app.route('/get_content', methods=['GET'])
+def get_content():
+    try:
+        with open('content.txt', 'r') as file:
+            content = file.read()
+            print(content)
+        return content
+    except Exception as e:
+        return str(e), 500
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error(f"An error occurred: {e}")
