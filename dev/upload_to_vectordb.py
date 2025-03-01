@@ -52,7 +52,8 @@ class ProgramInfo:
 class VectorDBUploader:
     def __init__(self, url: str, sitemap: bool = True, format_content: bool = True, 
                  source: str = "cps_program_docs", line_pairs: List[List[int]] = None, 
-                 info_type: str = "CPS Programs", cancel_check=None):
+                 info_type: str = "CPS Programs", cancel_check=None, 
+                 line_numbers: List[int] = None):
         """
         Initializes the uploader with the given parameters.
 
@@ -64,17 +65,19 @@ class VectorDBUploader:
             line_pairs (List[List[int]]): A list of lists containing line pairs to remove.
             info_type (str): The type of information being processed.
             cancel_check (callable): A function to check for cancellation.
+            line_numbers (List[int]): A list of line numbers for splitting content.
         """
         self.supabase = supabase
         self.url = url
         self.sitemap = sitemap
         self.format_content = format_content
         self.source = source
-        self.line_pairs = line_pairs if line_pairs is not None else []  # Initialize to an empty list if None
-        self.info_type = info_type  # Store the info type
+        self.line_pairs = line_pairs if line_pairs is not None else []
+        self.info_type = info_type
         self.logger = logging.getLogger('VectorDBUploader')
         self.logger.setLevel(logging.INFO)
         self.cancel_check = cancel_check or (lambda: False)
+        self.line_numbers = line_numbers if line_numbers is not None else []
 
     async def insert_chunk(self, chunk: ProgramInfo):
         """Insert a processed chunk into Supabase."""
@@ -319,21 +322,33 @@ class VectorDBUploader:
     
     #the below async function will take in a string content and split the content into chunks, with each chunk having atmost 4000 characaters.
     #and returns the chunks as a list. 
-    def split_content_into_chunks(self, content: str, max_chunk_size: int = 6000) -> List[str]:
+    def split_content_into_chunks(self, content: str, line_numbers: List[int]) -> List[str]:
         """
-        Splits the content into chunks of at most max_chunk_size characters.
+        Splits the content into chunks based on specified line numbers.
         
         Args:
-            content (str): The input content to be split
-            max_chunk_size (int): The maximum size of each chunk
+            content (str): The input content to be split.
+            line_numbers (List[int]): A list of line numbers at which to split the content.
         
         Returns:
-            List[str]: A list of chunks, each with at most max_chunk_size characters
+            List[str]: A list of chunks, each corresponding to the specified line numbers.
         """
+        lines = content.splitlines(keepends=True)  # Split content into lines
         chunks = []
-        for i in range(0, len(content), max_chunk_size):
-            chunk = content[i:i + max_chunk_size]
-            chunks.append(chunk)
+        
+        # Ensure line_numbers are sorted and unique
+        line_numbers = sorted(set(line_numbers))
+        
+        # Add start and end markers for chunking
+        line_numbers = [0] + line_numbers + [len(lines)]
+        
+        # Create chunks based on line number boundaries
+        for i in range(len(line_numbers) - 1):
+            start_line = line_numbers[i]
+            end_line = line_numbers[i + 1]
+            chunk = ''.join(lines[start_line:end_line])  # Join lines to form a chunk
+            chunks.append(chunk.strip())  # Strip leading/trailing whitespace
+        
         return chunks
 
     async def extract_program_info(self, chunk: str, url: str, chunk_number: int, program_details: dict = None) -> Optional[ProgramInfo]:
@@ -519,9 +534,9 @@ class VectorDBUploader:
                     chunks = self.chunk_program_content(content)
                 elif self.info_type == "Coop Information":
                     content = self.remove_content_between_lines(content, self.line_pairs)
-                    chunks = self.split_content_into_chunks(content)
+                    chunks = self.split_content_into_chunks(content, self.line_numbers)
                 elif self.info_type == "Others":
-                    chunks = self.split_content_into_chunks(content)        
+                    chunks = self.split_content_into_chunks(content, self.line_pairs)        
             self.logger.info("Number of chunks: " + str(len(chunks)))
 
             #The following code will write the content to a text file.
@@ -531,46 +546,46 @@ class VectorDBUploader:
                 for chunk in chunks:
                     f.write(chunk + '\n')
             
-            program_infos = []
-            program_details = {}
-            for i, chunk in enumerate(chunks, 1):
-                if self.info_type == "CPS Programs":
-                    info = await self.extract_program_info(
-                        chunk=chunk,
-                        url=url,
-                        chunk_number=i,
-                        program_details=program_details
-                    )
+            # program_infos = []
+            # program_details = {}
+            # for i, chunk in enumerate(chunks, 1):
+            #     if self.info_type == "CPS Programs":
+            #         info = await self.extract_program_info(
+            #             chunk=chunk,
+            #             url=url,
+            #             chunk_number=i,
+            #             program_details=program_details
+            #         )
                 
-                    if info:
-                        if i == 1:
-                            # Store just the program-specific details from first chunk
-                            program_details = {
-                                'program_name': info.metadata['program_name'],
-                                'program_mode': info.metadata['program_mode'],
-                                'campus_location': info.metadata['campus_location']
-                            }
-                        program_infos.append(info)
-                        await self.insert_chunk(info)
-                elif self.info_type == "Coop Information":
-                    embedding = await self.get_embedding(chunk)
-                    info = ProgramInfo(
-                        url=url,
-                        title="Coop",
-                        summary="Coop",
-                        content=chunk,      
-                        chunk_number=i,
-                        embedding = embedding,
-                        metadata={
-                            "source": "coop_information",
-                            "url_path": urlparse(url).path
-                        }
-                    )
+            #         if info:
+            #             if i == 1:
+            #                 # Store just the program-specific details from first chunk
+            #                 program_details = {
+            #                     'program_name': info.metadata['program_name'],
+            #                     'program_mode': info.metadata['program_mode'],
+            #                     'campus_location': info.metadata['campus_location']
+            #                 }
+            #             program_infos.append(info)
+            #             await self.insert_chunk(info)
+            #     elif self.info_type == "Coop Information":
+            #         embedding = await self.get_embedding(chunk)
+            #         info = ProgramInfo(
+            #             url=url,
+            #             title="Coop",
+            #             summary="Coop",
+            #             content=chunk,      
+            #             chunk_number=i,
+            #             embedding = embedding,
+            #             metadata={
+            #                 "source": "coop_information",
+            #                 "url_path": urlparse(url).path
+            #             }
+            #         )
                 
-                    program_infos.append(info)
-                    await self.insert_chunk(info)
-            
-            return program_infos
+            #         program_infos.append(info)
+            #         await self.insert_chunk(info)
+            return None
+            #return program_infos
             
         except Exception as e:
             self.logger.info(f"Error processing {url}: {e}")
