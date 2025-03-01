@@ -61,6 +61,22 @@ begin
    where metadata @> filter
    order by similarity desc
    limit 5;
+elsif search_mode = 'coop' then
+   -- For co-op search, retrieve relevant chunks where source is coop_information
+   return query
+   select
+    id,
+    url,
+    chunk_number,
+    title,
+    summary,
+    content,
+    metadata,
+    1 - (site_pages.embedding <=> query_embedding) as similarity
+   from site_pages
+   where metadata @> filter and metadata->>'source' = 'coop_information'
+   order by similarity desc
+   limit 3;
  else
   -- Step 1: Find the most relevant program based on the title and metadata
   select title into top_program_title

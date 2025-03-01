@@ -125,6 +125,7 @@ def get_available_programs():
         return []
 
 def generate_prompt(query: str, context: str) -> str:
+    """Generate a prompt for the AI model based on user query and context"""
     prompt_template = """ You are an AI assistant for the College of Professional Studies at Northeastern University, providing detailed and relevant information about course programs.
     If you cannot find the relevant information, ask the user to start a new search for course specific search results in this assistant.  
 **Instructions:**  
@@ -144,6 +145,7 @@ def generate_prompt(query: str, context: str) -> str:
     return prompt_template.format(context=context, query=query)
 
 def concatenate_chunks(chunks: List[dict], max_length: int = 100000) -> str:
+    """Concatenate text chunks into a single string with a maximum length"""
     context_parts = []
     current_length = 0
     
@@ -159,6 +161,7 @@ def concatenate_chunks(chunks: List[dict], max_length: int = 100000) -> str:
     return "".join(context_parts)
 
 def stream_groq_response(prompt: str) -> None:
+    """Stream the response from the Groq API"""
     try:
         chat = ChatGroq(
             model="llama3-70b-8192",
@@ -180,6 +183,7 @@ def stream_groq_response(prompt: str) -> None:
         return None
 
 def process_search_results(query: str, results: List[dict]) -> None:
+    """Process the search results and generate a response"""
     if not results:
         st.warning("No results found for your query.")
         return
@@ -187,10 +191,10 @@ def process_search_results(query: str, results: List[dict]) -> None:
     context = concatenate_chunks(results)
     rag_prompt = generate_prompt(query, context)
     
-    #st.write("Generating response...")
     stream_groq_response(rag_prompt)
 
 def initialize_session_state():
+    """Initialize session state variables"""
     if 'selected_program' not in st.session_state:
         st.session_state.selected_program = None
     if 'search_mode' not in st.session_state:
@@ -201,6 +205,7 @@ def initialize_session_state():
         st.session_state.last_query = ""
 
 def reset_session():
+    """Reset session state variables"""
     st.session_state.selected_program = None
     st.session_state.search_mode = None
     st.session_state.program_search = ""
@@ -208,31 +213,38 @@ def reset_session():
     st.rerun()
 
 def filter_programs(programs, search_term):
+    """Filter programs based on the search term"""
     if not search_term:
         return programs
     search_term = search_term.lower()
     return [prog for prog in programs if search_term in prog.lower()]
 
 def get_relevant_chunks(query, program_name: Optional[str] = None, top_k=10):
+    """Fetch relevant chunks based on the user query and program name"""
     try:
         embeddings = OllamaEmbeddings()
         query_embedding = embeddings.embed_query(query)
         
         filter_params = {
-            'source': 'cps_program_docs'
+            'source': 'coop_information' if program_name == "coop_information" else 'cps_program_docs'
         }
-        if program_name:
+        
+        if program_name != "coop_information" and program_name != "":
             filter_params['program_name'] = program_name
         
+        search_mode = 'coop' if program_name == "coop_information" else 'general' if program_name == "" else 'specific'
+        print(search_mode)
+        print(filter_params)
         response = supabase.rpc(
             'match_site_pages',
             {
                 'query_embedding': query_embedding,
                 'match_count': top_k,
-                'search_mode': 'general' if program_name == "" else 'specific',
+                'search_mode': search_mode,
                 'filter': filter_params
             }
         ).execute()
+        print(response)
         
         return response.data or []
         
@@ -241,6 +253,7 @@ def get_relevant_chunks(query, program_name: Optional[str] = None, top_k=10):
         return []
 
 def main():
+    """Main function to run the Streamlit app"""
     # Title section with custom styling
     st.markdown('<p class="big-font">🐾 AI Assistant for CPS Programs</p>', unsafe_allow_html=True)
     st.markdown(
@@ -261,7 +274,7 @@ def main():
     # If search mode not selected, show initial options
     if st.session_state.search_mode is None:
         st.write("#### Choose Your Search Mode:")
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             if st.button("🎯 Program-Specific Search"):
@@ -271,6 +284,11 @@ def main():
             if st.button("🔍 General Search"):
                 st.session_state.search_mode = "general"
                 st.session_state.selected_program = ""
+                st.rerun()
+        with col3:
+            if st.button("👔 Coop Search"):
+                st.session_state.search_mode = "coop"
+                st.session_state.selected_program = "coop_information"
                 st.rerun()
     
     # Program selection
@@ -291,27 +309,38 @@ def main():
         st.write("---")
         
         # Current mode display
-        mode_text = "🔍 General Search" if st.session_state.search_mode == "general" else "🎯 Program-Specific Search"
+        mode_text = {
+            "coop": "👔 Coop Search",
+            "general": "🔍 General Search",
+            "specific": "🎯 Program-Specific Search"
+        }.get(st.session_state.search_mode, "")
+        
         st.markdown(f"**Current Mode:** {mode_text}")
         
         if st.session_state.search_mode == "specific" and st.session_state.selected_program:
             st.markdown(f"**Selected Program:** 📚 {st.session_state.selected_program}")
 
-        placeholder = "Examples: What is the course structure? Or ask anything you'd like to know and hit enter!"
-        if st.session_state.search_mode == "specific":
-            placeholder = "Examples: What is the course structure? Or ask anything you'd like to know about the program and hit enter!"
-        else:
-            placeholder = "Examples: Compare between two courses! Or ask anything you'd like to know about any program and hit enter!"
+        placeholder = {
+            "specific": "Examples: What is the course structure? Or ask anything you'd like to know about the program and hit enter!",
+            "coop": "Examples: What is the coop process? Or ask anything you'd like to know about coop and hit enter!",
+            "general": "Examples: Compare between two courses! Or ask anything you'd like to know about any program and hit enter!"
+        }.get(st.session_state.search_mode, "Examples: What is the course structure? Or ask anything you'd like to know and hit enter!")
         
         # Search input with automatic trigger
-        query = st.text_input("💭 What would you like to know?",placeholder=placeholder, key="search_query")
+        query = st.text_input("💭 What would you like to know?", placeholder=placeholder, key="search_query")
         if query and st.session_state.get('last_query') != query:
             st.session_state['last_query'] = query
-            program_name = st.session_state.selected_program if st.session_state.search_mode == "specific" else ""
+            program_name = ""
+            if st.session_state.search_mode == "specific":
+                program_name = st.session_state.selected_program
+            elif st.session_state.search_mode == "coop":
+                program_name = "coop_information"
+            else:
+                program_name = ""
             with st.spinner("🤔 Searching..."):
+                print(program_name)
                 results = get_relevant_chunks(query, program_name=program_name)
                 process_search_results(query, results)
-            
 
 if __name__ == "__main__":
     main()
