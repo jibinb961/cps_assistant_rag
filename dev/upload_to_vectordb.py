@@ -51,12 +51,27 @@ class ProgramInfo:
 
 class VectorDBUploader:
     def __init__(self, url: str, sitemap: bool = True, format_content: bool = True, 
-                 source: str = "cps_program_docs", cancel_check=None):
+                 source: str = "cps_program_docs", line_pairs: List[List[int]] = None, 
+                 info_type: str = "CPS Programs", cancel_check=None):
+        """
+        Initializes the uploader with the given parameters.
+
+        Args:
+            url (str): The URL to process.
+            sitemap (bool): Whether to use a sitemap.
+            format_content (bool): Whether to format the content.
+            source (str): The source of the content.
+            line_pairs (List[List[int]]): A list of lists containing line pairs to remove.
+            info_type (str): The type of information being processed.
+            cancel_check (callable): A function to check for cancellation.
+        """
         self.supabase = supabase
         self.url = url
         self.sitemap = sitemap
         self.format_content = format_content
         self.source = source
+        self.line_pairs = line_pairs if line_pairs is not None else []  # Initialize to an empty list if None
+        self.info_type = info_type  # Store the info type
         self.logger = logging.getLogger('VectorDBUploader')
         self.logger.setLevel(logging.INFO)
         self.cancel_check = cancel_check or (lambda: False)
@@ -275,6 +290,51 @@ class VectorDBUploader:
             return [chunk1, chunk2, '']
         
         return [chunk1, chunk2, chunk3]
+    
+    #the below is function is an async function that formats the content by removing lines that start with [
+    async def remove_lines_with_special_chars(self, content: str, special_chars: List[str]) -> str:
+        """
+        Removes any lines in the content that start with any of the specified special characters.
+
+        Args:
+            content (str): The input content to process.
+            special_chars (List[str]): A list of special characters to check for.
+
+        Returns:
+            str: The content with specified lines removed.
+        """
+        # Split the content into lines
+        lines = content.splitlines(keepends=True)
+
+        # Create a set of special characters for faster lookup
+        special_chars_set = set(special_chars)
+
+        # Filter out lines that start with any of the special characters
+        filtered_lines = [line for line in lines if not line.startswith(tuple(special_chars_set))]
+
+        # Join the remaining lines back into a single string
+        remaining_content = ''.join(filtered_lines)
+
+        return remaining_content
+    
+    #the below async function will take in a string content and split the content into chunks, with each chunk having atmost 4000 characaters.
+    #and returns the chunks as a list. 
+    def split_content_into_chunks(self, content: str, max_chunk_size: int = 6000) -> List[str]:
+        """
+        Splits the content into chunks of at most max_chunk_size characters.
+        
+        Args:
+            content (str): The input content to be split
+            max_chunk_size (int): The maximum size of each chunk
+        
+        Returns:
+            List[str]: A list of chunks, each with at most max_chunk_size characters
+        """
+        chunks = []
+        for i in range(0, len(content), max_chunk_size):
+            chunk = content[i:i + max_chunk_size]
+            chunks.append(chunk)
+        return chunks
 
     async def extract_program_info(self, chunk: str, url: str, chunk_number: int, program_details: dict = None) -> Optional[ProgramInfo]:
         """
@@ -402,6 +462,30 @@ class VectorDBUploader:
         except Exception as e:
             self.logger.info(f"Error processing chunk for {url}: {e}")
             return None
+    #this funtion takes a lists of lists and each list inside the list is a pair of two numbers. And the function also takes in a string content.
+    #The function then loops through each list in the main list and then removes the content between the line numbers of the pair.
+    def remove_content_between_lines(self, content: str, line_pairs: List[List[int]]) -> str:
+        """
+        Removes content between specified line numbers in the content.
+        
+        Args:
+            content (str): The input content to process 
+            line_pairs (List[List[int]]): A list of lists, each containing two integers representing line numbers
+        
+        Returns:
+            str: The content with the specified lines removed
+        """
+        lines = content.splitlines(keepends=True)   
+
+        # Sort line pairs to ensure we process from the highest index to the lowest
+        line_pairs.sort(key=lambda x: x[0])
+
+        # Remove lines in reverse order to avoid index shifting issues
+        for start, end in reversed(line_pairs):
+            lines = lines[:start] + lines[end + 1:]  # Keep lines before 'start' and after 'end'
+        
+        return ''.join(lines)   
+    
 
     async def process_url(self, url: str, crawler: AsyncWebCrawler) -> List[ProgramInfo]:
         """Process a single URL and extract program information."""
@@ -426,29 +510,63 @@ class VectorDBUploader:
                 return []
             
             content = result.markdown_v2.raw_markdown
-            if self.format_content:
-                content = self.process_and_modify_markdown(content)
-            
-            chunks = self.chunk_program_content(content)
-            self.logger.info(len(chunks))
+            chunks = []
+            self.logger.info("Info type: " + self.info_type)
+            self.logger.info("Line pairs: " + str(self.line_pairs))
+            if self.format_content:         
+                if self.info_type == "CPS Programs":
+                    content = self.process_and_modify_markdown(content)
+                    chunks = self.chunk_program_content(content)
+                elif self.info_type == "Coop Information":
+                    content = self.remove_content_between_lines(content, self.line_pairs)
+                    chunks = self.split_content_into_chunks(content)
+                elif self.info_type == "Others":
+                    chunks = self.split_content_into_chunks(content)        
+            self.logger.info("Number of chunks: " + str(len(chunks)))
+
+            #The following code will write the content to a text file.
+            with open('content.txt', 'w') as f:
+                f.write(content)
+            with open('chunks.txt', 'w') as f:
+                for chunk in chunks:
+                    f.write(chunk + '\n')
             
             program_infos = []
             program_details = {}
             for i, chunk in enumerate(chunks, 1):
-                info = await self.extract_program_info(
-                    chunk=chunk,
-                    url=url,
-                    chunk_number=i,
-                    program_details=program_details
-                )
-                if info:
-                    if i == 1:
-                        # Store just the program-specific details from first chunk
-                        program_details = {
-                            'program_name': info.metadata['program_name'],
-                            'program_mode': info.metadata['program_mode'],
-                            'campus_location': info.metadata['campus_location']
+                if self.info_type == "CPS Programs":
+                    info = await self.extract_program_info(
+                        chunk=chunk,
+                        url=url,
+                        chunk_number=i,
+                        program_details=program_details
+                    )
+                
+                    if info:
+                        if i == 1:
+                            # Store just the program-specific details from first chunk
+                            program_details = {
+                                'program_name': info.metadata['program_name'],
+                                'program_mode': info.metadata['program_mode'],
+                                'campus_location': info.metadata['campus_location']
+                            }
+                        program_infos.append(info)
+                        await self.insert_chunk(info)
+                elif self.info_type == "Coop Information":
+                    embedding = await self.get_embedding(chunk)
+                    info = ProgramInfo(
+                        url=url,
+                        title="Coop",
+                        summary="Coop",
+                        content=chunk,      
+                        chunk_number=i,
+                        embedding = embedding,
+                        metadata={
+                            "source": "coop_information",
+                            "url_path": urlparse(url).path
                         }
+                    )
+                
                     program_infos.append(info)
                     await self.insert_chunk(info)
             

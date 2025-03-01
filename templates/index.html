@@ -7,17 +7,21 @@
     <title>Data Pipeline Orchestrator</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Add custom styles here */
+        body {
+            background-color: #343a40; /* Dark background */
+            color: white; /* White text */
+        }
         .container {
             margin-top: 50px;
         }
         #log {
             height: 300px;
             overflow-y: scroll;
-            background-color: #f8f9fa;
+            background-color: #495057; /* Darker log background */
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #ced4da; /* Light border */
             font-family: monospace;
+            color: #f8f9fa; /* Light text in log */
         }
         .log-error {
             color: #dc3545;  /* Red color for errors */
@@ -28,11 +32,52 @@
             font-weight: bold;
         }
         .log-info {
-            color: #0275d8;  /* Blue color for info */
+            color: #17a2b8;  /* Cyan color for info */
+        }
+        .navbar {
+            background-color: #212529; /* Dark navbar */
+        }
+        .form-control, .form-check-input {
+            background-color: #495057; /* Dark input fields */
+            color: white; /* White text in input fields */
+            border: 1px solid #ced4da; /* Light border */
+        }
+        .form-control:focus {
+            background-color: #6c757d; /* Darker focus background */
+            color: white; /* White text on focus */
+            border-color: #80bdff; /* Light blue border on focus */
+        }
+        .btn-primary {
+            background-color: #007bff; /* Primary button color */
+            border-color: #007bff; /* Border color */
+        }
+        .btn-primary:hover {
+            background-color: #0056b3; /* Darker on hover */
+            border-color: #0056b3; /* Darker border on hover */
+        }
+        .delete-line-input {
+            background: none;
+            border: none;
+            color: red;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <a class="navbar-brand" href="#">Data Pipeline Orchestrator</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">Home</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
     <div class="container">
         <h1 class="text-center">Data Pipeline Orchestrator</h1>
         <form id="uploaderForm">
@@ -49,9 +94,36 @@
                 <label class="form-check-label" for="format_content">Format Content</label>
             </div>
             <div class="form-group">
-                <label for="source">Source</label>
+                <label for="source">Source (source name for the data to be stored in the database)</label>
                 <input type="text" class="form-control" id="source" name="source" required>
             </div>
+
+            <!-- Add the combo box for selecting the type of information -->
+            <div class="form-group">
+                <label for="infoType">Type of Information:</label>
+                <select class="form-control" id="infoType" name="infoType" required>
+                    <option value="CPS Programs">CPS Programs</option>
+                    <option value="Coop Information">Coop Information</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+
+            <!-- Add this section for the line removal feature -->
+            <div>
+                <label for="removeLinesToggle">Remove Lines:</label>
+                <input type="checkbox" id="removeLinesToggle">
+            </div>
+
+            <div id="lineRemovalInputs" style="display: none;">
+                <h3>Line Ranges to Remove:</h3>
+                <div class="line-input">
+                    <input type="number" placeholder="Start Line" class="start-line">
+                    <input type="number" placeholder="End Line" class="end-line">
+                    <button type="button" class="delete-line-input" style="color: red;">✖</button>
+                </div>
+                <button type="button" id="addLineInput">Add Another Line Range</button>
+            </div>
+
             <button type="submit" class="btn btn-primary">Run</button>
             <button type="button" class="btn btn-danger" id="cancelButton">Cancel</button>
         </form>
@@ -93,10 +165,28 @@
                     $('#log').prepend(formattedMessage + '<br>');
                 };
 
+                // Gather line pairs if the toggle is on
+                const linePairs = [];
+                if (document.getElementById('removeLinesToggle').checked) {
+                    const lineInputs = document.querySelectorAll('.line-input');
+                    lineInputs.forEach(input => {
+                        const startLine = input.querySelector('.start-line').value;
+                        const endLine = input.querySelector('.end-line').value;
+                        if (startLine && endLine) {
+                            linePairs.push([parseInt(startLine), parseInt(endLine)]);
+                        }
+                    });
+                }
+
+                // Add linePairs and infoType to the data being sent
+                const formData = $(this).serializeArray();
+                formData.push({ name: 'line_pairs', value: JSON.stringify(linePairs) });
+                formData.push({ name: 'infoType', value: $('#infoType').val() }); // Get the selected info type
+
                 $.ajax({
                     url: '/',
                     type: 'POST',
-                    data: $(this).serialize(),
+                    data: formData,
                     success: function(response) {
                         $('#log').prepend(formatLogMessage('Process started...') + '<br>');
                     },
@@ -116,6 +206,66 @@
                 $.post('/cancel', function(response) {
                     $('#log').prepend(formatLogMessage('Process cancelled.') + '<br>');
                 });
+            });
+
+            // Toggle line removal inputs
+            document.getElementById('removeLinesToggle').addEventListener('change', function() {
+                const lineRemovalInputs = document.getElementById('lineRemovalInputs');
+                if (this.checked) {
+                    lineRemovalInputs.style.display = 'block';
+                    // Ensure at least one line input is present
+                    if (lineRemovalInputs.children.length === 1) {
+                        const newLineInput = document.createElement('div');
+                        newLineInput.classList.add('line-input');
+                        newLineInput.innerHTML = `
+                            <input type="number" placeholder="Start Line" class="start-line">
+                            <input type="number" placeholder="End Line" class="end-line">
+                            <button type="button" class="delete-line-input">✖</button> <!-- Delete button -->
+                        `;
+                        lineRemovalInputs.appendChild(newLineInput);
+                    }
+                    // Show the add button if it exists
+                    if (!document.getElementById('addLineInput')) {
+                        const addLineButton = document.createElement('button');
+                        addLineButton.type = 'button';
+                        addLineButton.id = 'addLineInput';
+                        addLineButton.className = 'btn btn-secondary mt-2';
+                        addLineButton.innerText = 'Add Another Line Range';
+                        lineRemovalInputs.appendChild(addLineButton);
+
+                        // Add functionality to the button
+                        addLineButton.addEventListener('click', function() {
+                            const newLineInput = document.createElement('div');
+                            newLineInput.classList.add('line-input');
+                            newLineInput.innerHTML = `
+                                <input type="number" placeholder="Start Line" class="start-line">
+                                <input type="number" placeholder="End Line" class="end-line">
+                                <button type="button" class="delete-line-input">✖</button> <!-- Delete button -->
+                            `;
+                            document.getElementById('lineRemovalInputs').appendChild(newLineInput);
+                        });
+                    }
+                } else {
+                    lineRemovalInputs.style.display = 'none';
+                    // Clear all line input fields
+                    const lineInputs = document.querySelectorAll('.line-input');
+                    lineInputs.forEach(input => {
+                        input.querySelector('.start-line').value = '';
+                        input.querySelector('.end-line').value = '';
+                    });
+                    // Optionally, remove all line input fields
+                    while (lineRemovalInputs.children.length > 1) {
+                        lineRemovalInputs.removeChild(lineRemovalInputs.lastChild);
+                    }
+                }
+            });
+
+            // Event delegation to handle delete button clicks
+            document.getElementById('lineRemovalInputs').addEventListener('click', function(event) {
+                if (event.target.classList.contains('delete-line-input')) {
+                    // Remove the line input field
+                    event.target.parentElement.remove();
+                }
             });
         });
     </script>
