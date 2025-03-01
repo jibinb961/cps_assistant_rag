@@ -546,46 +546,46 @@ class VectorDBUploader:
                 for chunk in chunks:
                     f.write(chunk + '\n')
             
-            # program_infos = []
-            # program_details = {}
-            # for i, chunk in enumerate(chunks, 1):
-            #     if self.info_type == "CPS Programs":
-            #         info = await self.extract_program_info(
-            #             chunk=chunk,
-            #             url=url,
-            #             chunk_number=i,
-            #             program_details=program_details
-            #         )
+            program_infos = []
+            program_details = {}
+            for i, chunk in enumerate(chunks, 1):
+                if self.info_type == "CPS Programs":
+                    info = await self.extract_program_info(
+                        chunk=chunk,
+                        url=url,
+                        chunk_number=i,
+                        program_details=program_details
+                    )
                 
-            #         if info:
-            #             if i == 1:
-            #                 # Store just the program-specific details from first chunk
-            #                 program_details = {
-            #                     'program_name': info.metadata['program_name'],
-            #                     'program_mode': info.metadata['program_mode'],
-            #                     'campus_location': info.metadata['campus_location']
-            #                 }
-            #             program_infos.append(info)
-            #             await self.insert_chunk(info)
-            #     elif self.info_type == "Coop Information":
-            #         embedding = await self.get_embedding(chunk)
-            #         info = ProgramInfo(
-            #             url=url,
-            #             title="Coop",
-            #             summary="Coop",
-            #             content=chunk,      
-            #             chunk_number=i,
-            #             embedding = embedding,
-            #             metadata={
-            #                 "source": "coop_information",
-            #                 "url_path": urlparse(url).path
-            #             }
-            #         )
+                    if info:
+                        if i == 1:
+                            # Store just the program-specific details from first chunk
+                            program_details = {
+                                'program_name': info.metadata['program_name'],
+                                'program_mode': info.metadata['program_mode'],
+                                'campus_location': info.metadata['campus_location']
+                            }
+                        program_infos.append(info)
+                        await self.insert_chunk(info)
+                elif self.info_type == "Coop Information":
+                    embedding = await self.get_embedding(chunk)
+                    info = ProgramInfo(
+                        url=url,
+                        title="Coop",
+                        summary="Coop",
+                        content=chunk,      
+                        chunk_number=i,
+                        embedding = embedding,
+                        metadata={
+                            "source": "coop_information",
+                            "url_path": urlparse(url).path
+                        }
+                    )
                 
-            #         program_infos.append(info)
-            #         await self.insert_chunk(info)
-            return None
-            #return program_infos
+                    program_infos.append(info)
+                    await self.insert_chunk(info)
+            #return None
+            return program_infos
             
         except Exception as e:
             self.logger.info(f"Error processing {url}: {e}")

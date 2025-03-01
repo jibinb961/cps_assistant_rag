@@ -38,13 +38,23 @@ def index():
         format_content = request.form.get('format_content') == 'on'
         source = request.form.get('source')
         info_type = request.form.get('infoType')
+        
         # Get line pairs from the request
         line_pairs = request.form.get('line_pairs')
         if line_pairs:
             line_pairs = json.loads(line_pairs)  # Convert the JSON string back to a list
 
-        # Pass line_pairs to the uploader
-        asyncio.run(run_uploader(sitemap_url, use_sitemap, format_content, source, line_pairs, info_type))
+        # Get line numbers from the request
+        line_numbers_input = request.form.get('line_numbers')
+        line_numbers = []
+        if line_numbers_input:
+            try:
+                line_numbers = [int(num.strip()) for num in line_numbers_input.split(',')]
+            except ValueError:
+                return jsonify({"error": "Invalid line numbers format."}), 400
+
+        # Pass line_pairs and line_numbers to the uploader
+        asyncio.run(run_uploader(sitemap_url, use_sitemap, format_content, source, line_pairs, info_type, line_numbers))
         return jsonify({"status": "Running"})
 
     return render_template('index.html')
@@ -73,7 +83,7 @@ def handle_exception(e):
     logger.error(f"An error occurred: {e}")
     return jsonify({"error": "An internal error occurred"}), 500
 
-async def run_uploader(sitemap_url, use_sitemap, format_content, source, line_pairs, info_type):
+async def run_uploader(sitemap_url, use_sitemap, format_content, source, line_pairs, info_type, line_numbers):
     global cancel_flag
     cancel_flag = False  # Reset cancel flag at start
     
@@ -85,6 +95,7 @@ async def run_uploader(sitemap_url, use_sitemap, format_content, source, line_pa
             source=source,
             line_pairs=line_pairs,
             info_type=info_type,
+            line_numbers=line_numbers,
             cancel_check=lambda: cancel_flag
         )
         await uploader.run()

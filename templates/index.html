@@ -80,7 +80,7 @@
 
     <div class="container">
         <h1 class="text-center">Data Pipeline Orchestrator</h1>
-        <form id="uploaderForm">
+        <form id="uploaderForm" method="POST">
             <div class="form-group">
                 <label for="sitemap_url">Sitemap URL or Single URL</label>
                 <input type="text" class="form-control" id="sitemap_url" name="sitemap_url" required>
@@ -122,6 +122,12 @@
                     <button type="button" class="delete-line-input" style="color: red;">✖</button>
                 </div>
                 <button type="button" id="addLineInput">Add Another Line Range</button>
+            </div>
+
+            <!-- New input field for line numbers -->
+            <div class="form-group">
+                <label for="line_numbers">Line numbers for splitting (comma-separated):</label>
+                <input type="text" class="form-control" id="line_numbers" name="line_numbers">
             </div>
 
             <button type="submit" class="btn btn-primary">Run</button>
