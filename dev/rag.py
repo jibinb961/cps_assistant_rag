@@ -257,13 +257,25 @@ def get_relevant_chunks(query, program_name: Optional[str] = None, top_k=10):
 
 def main():
     """Main function to run the Streamlit app"""
-    # Title section with custom styling
-    st.markdown('<p class="big-font">🐾 AI Assistant for CPS Programs</p>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="subtitle">Hey Huskies! 👋 Get instant answers about CPS programs, courses, and requirements. '
-        'Choose between a general search or dive deep into specific programs.</p>', 
-        unsafe_allow_html=True
-    )
+    
+    # Create two columns for title and image
+    col1, col2 = st.columns([3, 1])  # Adjust the ratio as needed
+
+    with col1:
+        # Title section with custom styling
+        st.markdown('<p class="big-font">🐾 AI Assistant for CPS Programs</p>', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="subtitle">Hey Huskies! 👋 Get instant answers about CPS programs, courses, and requirements. '
+            'Choose between a general search or dive deep into specific programs.</p>', 
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        # Display the image on the right
+        image_path = "images/CPSBOT10.png"  # Path to your image file
+        image = Image.open(image_path)  # Open the image
+        st.image(image, width=150)  # Set width to 200 pixels
+
 
     # Initialize session state
     initialize_session_state()
@@ -293,17 +305,6 @@ def main():
                 st.session_state.search_mode = "coop"
                 st.session_state.selected_program = "coop_information"
                 st.rerun()
-
-    # Display the image below the search modes
-    image_path = "images/CPSBOT6.png"  # Path to your image file
-    image = Image.open(image_path)  # Open the image
-
-    # Resize and position the image
-    st.image(image, width=600)  # Set width to 600 pixels
-
-    # # Alternatively, you can use a container to center the image
-    # with st.container():
-    #     st.image(image, caption="Your Image Caption Here", use_column_width=True)  # Responsive to column width
 
     # Program selection
     if st.session_state.search_mode == "specific":
