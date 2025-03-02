@@ -65,7 +65,7 @@
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
-        <a class="navbar-brand" href="#">Data Pipeline Orchestrator</a>
+        <a class="navbar-brand" href="#">CPS Data Pipeline Orchestrator</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -79,7 +79,7 @@
     </nav>
 
     <div class="container">
-        <h1 class="text-center">Data Pipeline Orchestrator</h1>
+        <h1 class="text-center">CPS Data Pipeline Orchestrator</h1>
         <form id="uploaderForm" method="POST">
             <div class="form-group">
                 <label for="sitemap_url">Sitemap URL or Single URL</label>
@@ -133,8 +133,7 @@
             <button type="submit" class="btn btn-primary">Run</button>
             <button type="button" class="btn btn-danger" id="cancelButton">Cancel</button>
         </form>
-        <button type="button" class="btn btn-info" id="viewContentButton">View Scraped Content</button>
-        <span id="contentButtonHint" style="color: gray;">(Click to view the scraped content)</span>
+        <button type="button" class="btn btn-info" id="viewContentButton" style="margin-top: 20px;">View Last Scraped Content</button>
         <div id="log" class="mt-4"></div>
     </div>
 
