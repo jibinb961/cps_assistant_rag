@@ -10,6 +10,7 @@ The **CPS AI Assistant** is an open-source AI-powered assistant designed to redu
 - **Streamlit UI** for easy interaction
 - **Automated Data Scraping & Cleaning**
 - **Fast and Scalable Deployment**
+- **Co-op Search Mode** for accessing co-op related information, deadlines, and contacts
 
 ## Technologies Used
 - **Python 3.9+**
@@ -29,6 +30,9 @@ Here are some snapshots of the project in action:
 
 ### Program-Specific Search
 ![Program-Specific Search](Snapshots/Program_Specifc_Search.png)
+
+### Co-op Search
+![Co-op Search](Snapshots/Coop_Search.png)
 
 ### General Search
 ![General Search](Snapshots/General_search.png)
@@ -154,7 +158,7 @@ Save the `.env` file once all values are added.
 1. **Data Collection**: The assistant scrapes relevant college data and preprocesses it.
 2. **Vectorization**: Data is split into chunks, embedded using Ollama, and stored in Supabase.
 3. **Query Processing**: User queries are processed via the RAG model, retrieving relevant chunks and generating responses.
-4. **AI Response**: The AI model (via Groq API) refines and presents the final answer.
+4. **AI Response**: The AI model (via Groq API) processes the information and provides detailed responses, including program-specific details, co-op information (deadlines, application processes, contact information), and general queries.
 
 ## Contributing
 Feel free to fork the repository and submit pull requests with improvements.
