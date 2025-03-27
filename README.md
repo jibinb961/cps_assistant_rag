@@ -32,7 +32,7 @@ Here are some snapshots of the project in action:
 ![Program-Specific Search](Snapshots/Program_Specifc_Search.png)
 
 ### Co-op Search
-![Co-op Search](Snapshots/Coop_Search.png)
+![Co-op Search](Snapshots/Coop_search.png)
 
 ### General Search
 ![General Search](Snapshots/General_search.png)
